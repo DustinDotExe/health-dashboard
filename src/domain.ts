@@ -9,6 +9,15 @@ export type Metric<T> = {
   note?: string;
 };
 
+export type TrendPoint = { date: string; value: number };
+
+export type HealthTrends = {
+  steps: TrendPoint[];
+  restingHeartRate: TrendPoint[];
+  hrv: TrendPoint[];
+  sleep: TrendPoint[];
+};
+
 export type HealthSnapshot = {
   date: string;
   steps: Metric<number>;
@@ -18,7 +27,10 @@ export type HealthSnapshot = {
   activeZoneMinutes: Metric<number>;
   oxygenSaturation: Metric<number>;
   respiratoryRate: Metric<number>;
-  trend: number[];
+  trends: {
+    sevenDay: HealthTrends;
+    thirtyDay: HealthTrends;
+  };
   source: "mock" | "google-health";
   syncedAt: string;
 };
