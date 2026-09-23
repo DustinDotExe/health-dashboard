@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "healthdash.health",
+  "name": "Healthdash",
+  "version": "0.1.0",
+  "author": "Healthdash",
+  "description": "Personal health signals for the Omarchy bar",
+  "kinds": ["bar-widget"],
+  "entryPoints": {
+    "barWidget": "Healthdash.qml"
+  },
+  "barWidget": {
+    "displayName": "Healthdash",
+    "description": "Personal health signals from hosted Healthdash",
+    "category": "Health",
+    "allowMultiple": false,
+    "defaultSection": "right",
+    "defaults": {
+      "baseUrl": "https://sysbody.stream"
+    },
+    "schema": [
+      { "key": "baseUrl", "type": "string", "label": "Healthdash URL" }
+    ]
+  }
+}

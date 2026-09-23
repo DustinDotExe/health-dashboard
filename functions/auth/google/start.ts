@@ -7,9 +7,12 @@ const scopes = [
   "https://www.googleapis.com/auth/googlehealth.sleep.readonly",
 ];
 
-export const onRequestGet = async ({ env }: { env: HealthdashEnv }) => {
+export const onRequestGet = async ({ request, env }: { request: Request; env: HealthdashEnv }) => {
   if (!configured(env) || !env.HEALTHDASH_AUTH) return json({ error: "oauth-not-configured" }, 503);
   const state = crypto.randomUUID();
+  const pair = new URL(request.url).searchParams.get("pair");
+  if (pair && !/^[a-f0-9-]{32,80}$/i.test(pair)) return json({ error: "invalid-pairing-code" }, 400);
+  await env.HEALTHDASH_AUTH.put(`oauth-state:${state}`, JSON.stringify({ pair: pair ?? null }), { expirationTtl: 600 });
   const authorization = new URL("https://accounts.google.com/o/oauth2/v2/auth");
   authorization.searchParams.set("client_id", env.GOOGLE_CLIENT_ID!);
   authorization.searchParams.set("redirect_uri", env.GOOGLE_REDIRECT_URI!);

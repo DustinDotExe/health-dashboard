@@ -12,6 +12,9 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: He
   if (!code) return json({ error: url.searchParams.get("error") ?? "missing-authorization-code" }, 400);
 
   try {
+    const oauthState = await env.HEALTHDASH_AUTH.get(`oauth-state:${state}`, "json") as { pair?: string | null } | null;
+    await env.HEALTHDASH_AUTH.delete(`oauth-state:${state}`);
+    if (!oauthState) return json({ error: "expired-oauth-state" }, 400);
     const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -33,6 +36,17 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: He
       return json({ error: "oauth-refresh-token-missing" }, 502);
     }
     await env.HEALTHDASH_AUTH.put("google-auth", JSON.stringify({ refreshToken: token.refresh_token, scope: token.scope, tokenType: token.token_type }));
+    if (oauthState?.pair) {
+      const pluginToken = crypto.randomUUID();
+      await env.HEALTHDASH_AUTH.put(`plugin-pair:${oauthState.pair}`, pluginToken, { expirationTtl: 600 });
+      return new Response(null, {
+        status: 302,
+        headers: {
+          Location: `/plugin/connect?complete=1&pair=${encodeURIComponent(oauthState.pair)}`,
+          "Set-Cookie": "healthdash_oauth_state=; Max-Age=0; HttpOnly; SameSite=Lax; Secure; Path=/",
+        },
+      });
+    }
     return new Response(null, {
       status: 302,
       headers: {

@@ -26,6 +26,14 @@ GET /auth/google/start
 GET /auth/google/callback
 GET /auth/google/logout
 GET /api/health/today
+GET /plugin/connect?pair=<one-time-code>
+GET /api/plugin/pair/status?pair=<one-time-code>
+GET /api/plugin/health/summary
 ```
+
+The plugin routes use the existing `HEALTHDASH_AUTH` KV namespace. A pairing
+code is short-lived, and the plugin credential is checked server-side before
+the summary endpoint returns data. The plugin API returns only normalized
+summary metrics, never Google access or refresh tokens.
 
 Until these bindings and variables are configured, the frontend remains on mock data and the functions return explicit configuration errors.
