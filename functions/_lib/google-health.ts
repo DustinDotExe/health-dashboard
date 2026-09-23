@@ -44,8 +44,8 @@ const healthData = async (token: string, dataType: string, filter: string, pageS
   return dataPoints;
 };
 
-const dailySteps = async (token: string, startDate: string, endDate: string) => {
-  const url = new URL("https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints:dailyRollUp");
+const dailyRollup = async (token: string, dataType: string, startDate: string, endDate: string) => {
+  const url = new URL(`https://health.googleapis.com/v4/users/me/dataTypes/${dataType}/dataPoints:dailyRollUp`);
   const dateParts = (value: string) => {
     const [year, month, day] = value.split("-").map(Number);
     return { date: { year, month, day }, time: { hours: 0, minutes: 0, seconds: 0, nanos: 0 } };
@@ -120,10 +120,13 @@ export const today = async (env: HealthdashEnv) => {
   const tomorrow = shiftDate(date, 1);
   const dayFilter = (field: string) => `${field} >= "${monthAgo}" AND ${field} < "${tomorrow}"`;
   const query = (dataType: string, filter: string, pageSize?: string) => healthData(token, dataType, filter, pageSize).catch(() => null);
-  const [stepsResult, restingResult, hrvResult, sleepResult] = await Promise.all([
-    dailySteps(token, monthAgo, tomorrow).catch(() => null),
+  const [stepsResult, activeZoneResult, restingResult, hrvResult, oxygenResult, respiratoryResult, sleepResult] = await Promise.all([
+    dailyRollup(token, "steps", monthAgo, tomorrow).catch(() => null),
+    dailyRollup(token, "active-zone-minutes", monthAgo, tomorrow).catch(() => null),
     query("daily-resting-heart-rate", dayFilter("daily_resting_heart_rate.date"), "100"),
     query("daily-heart-rate-variability", dayFilter("daily_heart_rate_variability.date"), "100"),
+    query("daily-oxygen-saturation", dayFilter("daily_oxygen_saturation.date"), "100"),
+    query("daily-respiratory-rate", dayFilter("daily_respiratory_rate.date"), "100"),
     query("sleep", `sleep.interval.civil_end_time >= "${monthAgo}" AND sleep.interval.civil_end_time < "${tomorrow}"`, "100"),
   ]);
 
@@ -135,8 +138,18 @@ export const today = async (env: HealthdashEnv) => {
     return days;
   }, {});
   const todaySteps = stepsByDay[date];
+  const activeZoneByDay = (activeZoneResult?.rollupDataPoints ?? []).reduce<Record<string, number>>((days, point) => {
+    const pointDay = pointDate(point, "civilStartTime");
+    const zones = point.activeZoneMinutes as { sumInCardioHeartZone?: string; sumInPeakHeartZone?: string; sumInFatBurnHeartZone?: string } | undefined;
+    const value = Number(zones?.sumInCardioHeartZone ?? 0) + Number(zones?.sumInPeakHeartZone ?? 0) + Number(zones?.sumInFatBurnHeartZone ?? 0);
+    if (pointDay && Number.isFinite(value)) days[pointDay] = value;
+    return days;
+  }, {});
+  const todayActiveZoneMinutes = activeZoneByDay[date];
   const restingByDay = dailyValues(restingResult ?? [], "dailyRestingHeartRate", "beatsPerMinute");
   const hrvByDay = dailyValues(hrvResult ?? [], "dailyHeartRateVariability", "averageHeartRateVariabilityMilliseconds");
+  const oxygenByDay = dailyValues(oxygenResult ?? [], "dailyOxygenSaturation", "averagePercentage");
+  const respiratoryByDay = dailyValues(respiratoryResult ?? [], "dailyRespiratoryRate", "breathsPerMinute");
   const sleepPoints = sleepResult ?? [];
   const sleepByDay = sleepPoints.reduce<Record<string, number>>((values, point) => {
     const sleep = point.sleep as { summary?: { minutesAsleep?: string }; interval?: { startTime?: string; endTime?: string } } | undefined;
@@ -158,6 +171,8 @@ export const today = async (env: HealthdashEnv) => {
   const baseline = average(recentSteps.slice(0, -1).map((point) => point.value)) ?? average(recentSteps.map((point) => point.value));
   const resting = restingSeries.at(-1)?.value;
   const hrv = hrvSeries.at(-1)?.value;
+  const oxygen = oxygenByDay[date] ?? series(oxygenByDay).at(-1)?.value;
+  const respiratory = respiratoryByDay[date] ?? series(respiratoryByDay).at(-1)?.value;
   const sleepHours = sleepSeries.at(-1)?.value;
   const steps = metric(todaySteps || undefined, "steps") as { state: string; value?: number; unit: string; baseline?: number };
   if (baseline !== undefined) {
@@ -184,9 +199,9 @@ export const today = async (env: HealthdashEnv) => {
     restingHeartRate: restingResult ? restingMetric : unavailable("bpm", "Google Health resting heart rate is unavailable."),
     hrv: hrvResult ? hrvMetric : unavailable("ms", "Google Health HRV is unavailable."),
     sleep: sleepResult ? sleepMetric : unavailable("hours", "Google Health sleep is unavailable."),
-    activeZoneMinutes: unavailable("min", "Not fetched yet."),
-    oxygenSaturation: unavailable("%", "Not fetched yet."),
-    respiratoryRate: unavailable("brpm", "Not fetched yet."),
+    activeZoneMinutes: activeZoneResult ? metric(todayActiveZoneMinutes, "min") : unavailable("min", "Google Health active zone minutes are unavailable."),
+    oxygenSaturation: oxygenResult ? metric(oxygen, "%") : unavailable("%", "Google Health oxygen saturation is unavailable."),
+    respiratoryRate: respiratoryResult ? metric(respiratory, "brpm") : unavailable("brpm", "Google Health respiratory rate is unavailable."),
     trends: {
       sevenDay: { steps: stepSeries.slice(-7), restingHeartRate: restingSeries.slice(-7), hrv: hrvSeries.slice(-7), sleep: sleepSeries.slice(-7) },
       thirtyDay: { steps: stepSeries, restingHeartRate: restingSeries, hrv: hrvSeries, sleep: sleepSeries },

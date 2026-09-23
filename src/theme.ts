@@ -1,16 +1,16 @@
 const fallback = {
-  name: "fallback",
-  background: "#101214",
-  dark_background: "#0b0d0f",
-  darker_background: "#080a0c",
-  lighter_background: "#1c2226",
-  foreground: "#e5e7eb",
-  dark_foreground: "#8b949e",
-  muted: "#69737d",
-  accent: "#7dd3c7",
-  green: "#a9d18e",
-  yellow: "#e4b86a",
-  red: "#e27d86",
+  name: "everforest",
+  background: "#2d353b",
+  dark_background: "#21272c",
+  darker_background: "#181d20",
+  lighter_background: "#343f44",
+  foreground: "#d3c6aa",
+  dark_foreground: "#4f585e",
+  muted: "#475258",
+  accent: "#7fbbb3",
+  green: "#a7c080",
+  yellow: "#dbbc7f",
+  red: "#e67e80",
 };
 
 const parseColors = (text: string) =>
