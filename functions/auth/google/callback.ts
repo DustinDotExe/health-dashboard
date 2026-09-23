@@ -23,9 +23,15 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: He
         grant_type: "authorization_code",
       }),
     });
-    if (!tokenResponse.ok) return json({ error: "oauth-token-exchange-failed" }, 502);
+    if (!tokenResponse.ok) {
+      console.error("[oauth] token exchange failed", tokenResponse.status);
+      return json({ error: "oauth-token-exchange-failed" }, 502);
+    }
     const token = await tokenResponse.json() as { refresh_token?: string; scope?: string; token_type?: string };
-    if (!token.refresh_token) return json({ error: "oauth-refresh-token-missing" }, 502);
+    if (!token.refresh_token) {
+      console.error("[oauth] refresh token missing from token exchange");
+      return json({ error: "oauth-refresh-token-missing" }, 502);
+    }
     await env.HEALTHDASH_AUTH.put("google-auth", JSON.stringify({ refreshToken: token.refresh_token, scope: token.scope, tokenType: token.token_type }));
     return new Response(null, {
       status: 302,
@@ -34,7 +40,8 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: He
         "Set-Cookie": "healthdash_oauth_state=; Max-Age=0; HttpOnly; SameSite=Lax; Secure; Path=/",
       },
     });
-  } catch {
+  } catch (error) {
+    console.error("[oauth] callback failed", error instanceof Error ? error.name : "unknown-error");
     return json({ error: "oauth-callback-failed" }, 502);
   }
 };

@@ -15,6 +15,7 @@ export const onRequestGet = async ({ env }: { env: HealthdashEnv }) => {
   authorization.searchParams.set("redirect_uri", env.GOOGLE_REDIRECT_URI!);
   authorization.searchParams.set("response_type", "code");
   authorization.searchParams.set("access_type", "offline");
+  authorization.searchParams.set("prompt", "consent");
   authorization.searchParams.set("include_granted_scopes", "true");
   authorization.searchParams.set("state", state);
   authorization.searchParams.set("scope", scopes.join(" "));
