@@ -44,6 +44,25 @@ const healthData = async (token: string, dataType: string, filter: string, pageS
   return dataPoints;
 };
 
+const dailySteps = async (token: string, startDate: string, endDate: string) => {
+  const url = new URL("https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints:dailyRollUp");
+  const dateParts = (value: string) => {
+    const [year, month, day] = value.split("-").map(Number);
+    return { date: { year, month, day }, time: { hours: 0, minutes: 0, seconds: 0, nanos: 0 } };
+  };
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json", "Content-Type": "application/json" },
+    body: JSON.stringify({
+      range: { start: dateParts(startDate), end: dateParts(endDate) },
+      windowSizeDays: 1,
+      dataSourceFamily: "users/me/dataSourceFamilies/all-sources",
+    }),
+  });
+  if (!response.ok) throw new Error(`health-api-${response.status}`);
+  return await response.json() as { rollupDataPoints?: DataPoint[] };
+};
+
 const civilDate = (date: Date) => {
   const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
   const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
@@ -63,6 +82,18 @@ const pointDate = (point: DataPoint, field: string) => {
   } | undefined;
   const date = value?.date ?? value?.interval?.civilStartTime?.date ?? value?.interval?.civilEndTime?.date;
   return date?.year && date.month && date.day ? `${date.year}-${String(date.month).padStart(2, "0")}-${String(date.day).padStart(2, "0")}` : undefined;
+};
+
+const offsetSeconds = (offset: string | undefined) => {
+  const match = offset?.match(/^(-?\d+(?:\.\d+)?)s$/);
+  return match ? Number(match[1]) : 0;
+};
+
+const sleepDate = (point: DataPoint) => {
+  const interval = (point.sleep as { interval?: { endTime?: string; endUtcOffset?: string } } | undefined)?.interval;
+  if (!interval?.endTime) return undefined;
+  const localEnd = new Date(Date.parse(interval.endTime) + offsetSeconds(interval.endUtcOffset) * 1000);
+  return Number.isNaN(localEnd.getTime()) ? undefined : localEnd.toISOString().slice(0, 10);
 };
 
 const metric = (value: number | undefined, unit: string) => value === undefined
@@ -90,23 +121,20 @@ export const today = async (env: HealthdashEnv) => {
   const dayFilter = (field: string) => `${field} >= "${monthAgo}" AND ${field} < "${tomorrow}"`;
   const query = (dataType: string, filter: string, pageSize?: string) => healthData(token, dataType, filter, pageSize).catch(() => null);
   const [stepsResult, restingResult, hrvResult, sleepResult] = await Promise.all([
-    query("steps", dayFilter("steps.interval.civil_start_time")),
+    dailySteps(token, monthAgo, tomorrow).catch(() => null),
     query("daily-resting-heart-rate", dayFilter("daily_resting_heart_rate.date"), "100"),
     query("daily-heart-rate-variability", dayFilter("daily_heart_rate_variability.date"), "100"),
     query("sleep", `sleep.interval.civil_end_time >= "${monthAgo}" AND sleep.interval.civil_end_time < "${tomorrow}"`, "100"),
   ]);
 
-  const stepsPoints = stepsResult ?? [];
-  const dailySteps = stepsPoints.reduce((total, point) => {
-    const steps = point.steps as { count?: string } | undefined;
-    return pointDate(point, "steps") === date ? total + Number(steps?.count ?? 0) : total;
-  }, 0);
+  const stepsPoints = stepsResult?.rollupDataPoints ?? [];
   const stepsByDay = stepsPoints.reduce<Record<string, number>>((days, point) => {
-    const steps = point.steps as { count?: string } | undefined;
-    const pointDay = pointDate(point, "steps");
-    if (pointDay) days[pointDay] = (days[pointDay] ?? 0) + Number(steps?.count ?? 0);
+    const pointDay = pointDate(point, "civilStartTime");
+    const count = Number((point.steps as { countSum?: string } | undefined)?.countSum ?? 0);
+    if (pointDay && Number.isFinite(count)) days[pointDay] = count;
     return days;
   }, {});
+  const todaySteps = stepsByDay[date];
   const restingByDay = dailyValues(restingResult ?? [], "dailyRestingHeartRate", "beatsPerMinute");
   const hrvByDay = dailyValues(hrvResult ?? [], "dailyHeartRateVariability", "averageHeartRateVariabilityMilliseconds");
   const sleepPoints = sleepResult ?? [];
@@ -117,7 +145,7 @@ export const today = async (env: HealthdashEnv) => {
       : sleep?.interval?.startTime && sleep.interval.endTime
         ? (Date.parse(sleep.interval.endTime) - Date.parse(sleep.interval.startTime)) / 3_600_000
         : undefined;
-    const pointDay = pointDate(point, "sleep");
+    const pointDay = sleepDate(point);
     if (pointDay && sleepHours !== undefined && Number.isFinite(sleepHours)) values[pointDay] = (values[pointDay] ?? 0) + sleepHours;
     return values;
   }, {});
@@ -131,7 +159,7 @@ export const today = async (env: HealthdashEnv) => {
   const resting = restingSeries.at(-1)?.value;
   const hrv = hrvSeries.at(-1)?.value;
   const sleepHours = sleepSeries.at(-1)?.value;
-  const steps = metric(dailySteps || undefined, "steps") as { state: string; value?: number; unit: string; baseline?: number };
+  const steps = metric(todaySteps || undefined, "steps") as { state: string; value?: number; unit: string; baseline?: number };
   if (baseline !== undefined) {
     steps.baseline = baseline;
     (steps as { delta?: number }).delta = steps.value === undefined ? undefined : steps.value - baseline;
