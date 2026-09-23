@@ -174,7 +174,7 @@ export const today = async (env: HealthdashEnv) => {
   const oxygen = oxygenByDay[date] ?? series(oxygenByDay).at(-1)?.value;
   const respiratory = respiratoryByDay[date] ?? series(respiratoryByDay).at(-1)?.value;
   const sleepHours = sleepSeries.at(-1)?.value;
-  const steps = metric(todaySteps || undefined, "steps") as { state: string; value?: number; unit: string; baseline?: number };
+  const steps = metric(todaySteps ?? undefined, "steps") as { state: string; value?: number; unit: string; baseline?: number };
   if (baseline !== undefined) {
     steps.baseline = baseline;
     (steps as { delta?: number }).delta = steps.value === undefined ? undefined : steps.value - baseline;

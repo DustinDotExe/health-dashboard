@@ -47,3 +47,9 @@ export const metricDisplay = <T,>(metric: Metric<T>, formatter: (value: T) => st
   if (metric.state === "no-data" || metric.value === undefined) return "—";
   return formatter(metric.value);
 };
+
+export const metricStatus = (metric: Metric<unknown>) => {
+  if (metric.state === "available" && metric.value !== undefined) return "LIVE";
+  if (metric.state === "unavailable") return "UNAVAILABLE";
+  return "NO DATA";
+};

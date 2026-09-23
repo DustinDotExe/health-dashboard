@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
-import { formatNumber, metricDisplay, type HealthSnapshot, type TrendPoint } from "./domain";
+import { formatNumber, metricDisplay, metricStatus, type HealthSnapshot, type Metric, type TrendPoint } from "./domain";
 import { GoogleHealthProvider } from "./googleProvider";
 import { MockHealthProvider } from "./mockProvider";
 import { applyTheme, loadTheme } from "./theme";
@@ -51,11 +51,11 @@ function TrendsView({ data }: { data: HealthSnapshot }) {
   </div>;
 }
 
-function Card({ label, value, unit, delta, detail, tone = "accent", children }: { label: string; value: string; unit?: string; delta?: number; detail: string; tone?: string; children?: ReactNode }) {
+function Card({ label, value, unit, delta, detail, status, tone = "accent", children }: { label: string; value: string; unit?: string; delta?: number; detail: string; status?: string; tone?: string; children?: ReactNode }) {
   return <article className={`metric-card tone-${tone}`}>
     <div className="card-heading"><span>{label}</span><span className="card-mark">{tone === "positive" ? "↑" : "◈"}</span></div>
     <div className="metric-value">{value}<small>{unit}</small></div>
-    <div className="metric-meta"><span>{detail}</span>{delta !== undefined && <span className={delta >= 0 ? "delta-positive" : "delta-negative"}>{delta >= 0 ? "+" : ""}{delta} vs avg</span>}</div>
+    <div className="metric-meta"><span>{detail}</span>{status && <span className={`metric-status status-${status.toLowerCase().replace(" ", "-")}`}>{status}</span>}{delta !== undefined && <span className={delta >= 0 ? "delta-positive" : "delta-negative"}>{delta >= 0 ? "+" : ""}{delta} vs avg</span>}</div>
     {children}
   </article>;
 }
@@ -68,12 +68,13 @@ function Today({ data }: { data: HealthSnapshot }) {
   const recoveryState = data.hrv.state === "available" || data.restingHeartRate.state === "available" ? "SIGNALS ONLY" : "NO DATA";
   const signalText = (metric: HealthSnapshot["hrv"], formatter: (value: number) => string, unit: string) => `${metricDisplay(metric, formatter)} ${unit}`;
   const metricNote = (metric: HealthSnapshot["hrv"], fallback: string) => metric.note ?? fallback;
+  const signalTone = (metric: Metric<unknown>) => metric.state === "available" ? "good" : metric.state === "unavailable" ? "unavailable" : "missing";
   return <>
     <section className="hero-grid">
-      <Card label="Recovery signals" value={recoveryState} detail="No readiness score available" tone="positive"><div className="signal-row"><span className="signal good">HRV {metricDisplay(data.hrv, formatNumber)} ms</span><span className="signal good">RHR {metricDisplay(data.restingHeartRate, formatNumber)} bpm</span></div></Card>
-      <Card label="Steps / activity" value={metricDisplay(data.steps, formatNumber)} unit=" steps" delta={data.steps.delta} detail="Today so far" tone="accent"><div className="progress"><span style={{ width: `${stepsProgress ?? 0}%` }} /></div><div className="progress-label"><span>{stepsProgress === undefined ? "No baseline available" : `${stepsProgress}% of recent daily average`}</span><span>{data.source === "mock" ? "06:42 PM" : "Google Health"}</span></div></Card>
-      <Card label="Resting heart rate" value={metricDisplay(data.restingHeartRate, formatNumber)} unit=" bpm" delta={data.restingHeartRate.delta} detail="7-day personal baseline" tone="positive"><Sparkline values={data.trends.sevenDay.restingHeartRate.map((point) => point.value)} /></Card>
-      <Card label="Sleep" value={metricDisplay(data.sleep, (value) => `${value.toFixed(1)}`)} unit=" hrs" delta={data.sleep.delta} detail={metricNote(data.sleep, "Last sleep window")} tone="warning"><div className="sleep-bar"><span style={{ width: data.sleep.state === "available" ? "100%" : "0%" }} /></div><div className="progress-label"><span>{data.sleep.state === "available" ? "Duration recorded" : metricNote(data.sleep, "No sleep duration available")}</span><span>{data.sleep.state === "available" ? "Google Health" : "—"}</span></div></Card>
+      <Card label="Recovery signals" value={recoveryState} detail="No readiness score available" status={recoveryState === "NO DATA" ? "NO DATA" : "SIGNALS"} tone="positive"><div className="signal-row"><span className={`signal ${signalTone(data.hrv)}`}>HRV {metricDisplay(data.hrv, formatNumber)} ms</span><span className={`signal ${signalTone(data.restingHeartRate)}`}>RHR {metricDisplay(data.restingHeartRate, formatNumber)} bpm</span></div></Card>
+      <Card label="Steps / activity" value={metricDisplay(data.steps, formatNumber)} unit=" steps" delta={data.steps.delta} detail="Today so far" status={metricStatus(data.steps)} tone="accent"><div className="progress"><span style={{ width: `${stepsProgress ?? 0}%` }} /></div><div className="progress-label"><span>{stepsProgress === undefined ? "No baseline available" : `${stepsProgress}% of recent daily average`}</span><span>{data.source === "mock" ? "06:42 PM" : "Google Health"}</span></div></Card>
+      <Card label="Resting heart rate" value={metricDisplay(data.restingHeartRate, formatNumber)} unit=" bpm" delta={data.restingHeartRate.delta} detail="7-day personal baseline" status={metricStatus(data.restingHeartRate)} tone="positive"><Sparkline values={data.trends.sevenDay.restingHeartRate.map((point) => point.value)} /></Card>
+      <Card label="Sleep" value={metricDisplay(data.sleep, (value) => `${value.toFixed(1)}`)} unit=" hrs" delta={data.sleep.delta} detail={metricNote(data.sleep, "Last sleep window")} status={metricStatus(data.sleep)} tone="warning"><div className="sleep-bar"><span style={{ width: data.sleep.state === "available" ? "100%" : "0%" }} /></div><div className="progress-label"><span>{data.sleep.state === "available" ? "Duration recorded" : metricNote(data.sleep, "No sleep duration available")}</span><span>{data.sleep.state === "available" ? "Google Health" : "—"}</span></div></Card>
     </section>
     <section className="section-block">
       <div className="section-title"><span>SECONDARY SIGNALS</span><span className="section-rule" /></div>
@@ -109,8 +110,11 @@ export default function App() {
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [googleConnected, setGoogleConnected] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const refresh = async () => {
+    setRefreshing(true);
+    setLoadError(null);
     try {
       let auth: { connected: boolean } | null = null;
       try {
@@ -136,6 +140,8 @@ export default function App() {
     } catch (error) {
       setData(null);
       setLoadError(error instanceof Error ? error.message : "health-data-unavailable");
+    } finally {
+      setRefreshing(false);
     }
   };
   useEffect(() => { void refresh(); void loadTheme().then((theme) => { setThemeName(theme.name); applyTheme(theme); }); }, []);
@@ -153,9 +159,9 @@ export default function App() {
   useEffect(() => { const handler = () => setRoute("ask"); window.addEventListener("open-ask", handler); return () => window.removeEventListener("open-ask", handler); }, []);
 
   return <div className="app-shell">
-    <header className="topbar"><div className="brand"><span className="brand-glyph">+</span><strong>SYSBODY</strong><span className="brand-divider">//</span><small>LOCAL HUMAN COMMAND CENTER</small></div><div className="top-meta"><span><i className="live-dot" /> SYSTEM ONLINE</span><span>THEME // {themeName.toUpperCase()}</span><button onClick={() => void refresh()} title="Refresh data (r)">SYNC ↻</button></div></header>
+    <header className="topbar"><div className="brand"><span className="brand-glyph">+</span><strong>SYSBODY</strong><span className="brand-divider">//</span><small>LOCAL HUMAN COMMAND CENTER</small></div><div className="top-meta"><span><i className="live-dot" /> SYSTEM ONLINE</span><span>THEME // {themeName.toUpperCase()}</span><button onClick={() => void refresh()} disabled={refreshing} title="Refresh data (r)">{refreshing ? "SYNCING …" : "SYNC ↻"}</button></div></header>
     <div className="layout"><aside className="sidebar"><div className="nav-label">NAVIGATION</div>{routes.map((item) => <button key={item.key} className={route === item.key ? "active" : ""} onClick={() => setRoute(item.key)}><span><b>{item.shortcut}</b>{item.label}</span>{route === item.key && <em>●</em>}</button>)}<button className={route === "ask" ? "active" : ""} onClick={() => setRoute("ask")}><span><b>/</b>Ask Health</span>{route === "ask" && <em>●</em>}</button><div className="sidebar-footer"><div className="connection"><span className={`status-dot ${googleConnected ? "connected" : "mock"}`} /> <span>{googleConnected ? "GOOGLE HEALTH" : "MOCK PROVIDER"}<small>{googleConnected ? "CONNECTED" : "GOOGLE HEALTH // PENDING"}</small></span></div>{googleConnected ? <button onClick={() => { void fetch("/auth/google/logout").then(() => setGoogleConnected(false)); }} className="help-link">× DISCONNECT</button> : <button onClick={() => { window.location.href = "/auth/google/start"; }} className="help-link">+ CONNECT GOOGLE</button>}<button onClick={() => setHelpOpen(true)} className="help-link">? SHORTCUTS</button></div></aside>
-      <main><div className="page-header"><div><div className="eyebrow">HEALTH // {route.toUpperCase()}</div><h1>{route === "today" ? "How are you doing today?" : route === "ask" ? "Ask Health" : route}</h1></div><div className="date-block"><strong>{new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase()}</strong><span>LAST SYNC {lastRefresh.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></div></div>{data ? route === "today" ? <Today data={data} /> : <DetailView route={route} data={data} /> : loadError ? <div className="empty-detail"><strong>Health data unavailable</strong><small>{loadError}</small></div> : <div className="loading">LOADING HEALTH SIGNALS<span>...</span></div>}</main>
+      <main><div className="page-header"><div><div className="eyebrow">HEALTH // {route.toUpperCase()}</div><h1>{route === "today" ? "How are you doing today?" : route === "ask" ? "Ask Health" : route}</h1></div><div className="date-block"><strong>{new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase()}</strong><span>LAST SYNC {lastRefresh.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></div></div>{data ? route === "today" ? <Today data={data} /> : <DetailView route={route} data={data} /> : loadError ? <div className="empty-detail"><span>!</span><strong>Health data unavailable</strong><small>{loadError}</small><button className="retry-button" onClick={() => void refresh()} disabled={refreshing}>{refreshing ? "Retrying…" : "Retry sync"}</button></div> : <div className="loading" aria-live="polite">LOADING HEALTH SIGNALS<span>...</span></div>}</main>
     </div><footer className="statusbar"><span>LOCALHOST // READ-ONLY MODE</span><span>DATA SOURCE: {data?.source.toUpperCase() ?? "CONNECTING"}</span><span>PRESS <b>?</b> FOR HELP</span></footer>
     {helpOpen && <div className="overlay" role="dialog" aria-modal="true"><div className="help-modal"><div className="modal-heading"><span>KEYBOARD MAP</span><button onClick={() => setHelpOpen(false)}>ESC</button></div>{[["1—5", "Switch views"],["/", "Ask Health"],["r", "Refresh data"],["j / k", "Navigate lists"],["Esc", "Close overlay"]].map(([key, label]) => <div className="shortcut" key={key}><kbd>{key}</kbd><span>{label}</span></div>)}<p>SYSBODY is local-first. Connection to Google Health will be enabled after OAuth setup.</p></div></div>}
   </div>;
