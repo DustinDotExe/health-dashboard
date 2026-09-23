@@ -84,15 +84,23 @@ export default function App() {
 
   const refresh = async () => {
     try {
-      const authResponse = await fetch("/api/auth/status");
-      if (!authResponse.ok) {
+      let auth: { connected: boolean } | null = null;
+      try {
+        const authResponse = await fetch("/api/auth/status");
+        const contentType = authResponse.headers.get("content-type") ?? "";
+        if (authResponse.ok && contentType.includes("application/json")) {
+          auth = await authResponse.json() as { connected: boolean };
+        }
+      } catch {
+        // Static deployments do not have the local Vite API routes.
+      }
+      if (!auth) {
         setGoogleConnected(false);
         setData(await mockProvider.getToday());
         setLoadError(null);
         setLastRefresh(new Date());
         return;
       }
-      const auth = await authResponse.json() as { connected: boolean };
       setGoogleConnected(auth.connected);
       setData(await (auth.connected ? googleProvider : mockProvider).getToday());
       setLoadError(null);
