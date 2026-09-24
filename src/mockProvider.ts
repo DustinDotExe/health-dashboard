@@ -1,4 +1,5 @@
 import type { HealthProvider, HealthSnapshot, TrendPoint } from "./domain";
+import { deriveSystemStatus } from "../functions/_lib/system-status";
 
 const today = new Date();
 const dateAt = (daysAgo: number) => {
@@ -21,6 +22,12 @@ const thirtyDay = {
   sleep: [...series([7.1, 7.4, 7.8, 6.8, 7.6, 8.1, 6.9, 7.4, 7.8, 6.8, 7.2, 7.5, 7.9, 7.0, 7.3, 7.7, 7.1, 7.6, 8.1, 6.9, 7.4, 7.8, 6.8, 7.2])],
 };
 
+const mockSystemStatus = deriveSystemStatus({
+  hrv: { value: 48, baseline: 44, unit: "ms" },
+  restingHeartRate: { value: 57, baseline: 60, unit: "bpm" },
+  sleep: { value: 7.2, baseline: 7.8, unit: "hours" },
+});
+
 export const mockSnapshot: HealthSnapshot = {
   date: today.toISOString().slice(0, 10),
   steps: { state: "available", value: 6842, unit: "steps", baseline: 7210, delta: -368 },
@@ -30,12 +37,7 @@ export const mockSnapshot: HealthSnapshot = {
   activeZoneMinutes: { state: "available", value: 32, unit: "min", baseline: 28, delta: 4 },
   oxygenSaturation: { state: "available", value: 97, unit: "%", baseline: 97, delta: 0 },
   respiratoryRate: { state: "available", value: 15.6, unit: "brpm", baseline: 15.4, delta: 0.2 },
-  systemStatus: {
-    state: "available",
-    score: 61,
-    note: "Derived from HRV, resting heart rate, and sleep against your personal baseline.",
-    signals: [{ label: "HRV", unit: "ms", delta: 4 }, { label: "RHR", unit: "bpm", delta: -3 }, { label: "SLEEP", unit: "hours", delta: -0.6 }],
-  },
+  systemStatus: mockSystemStatus,
   trends: { sevenDay, thirtyDay },
   source: "mock",
   syncedAt: new Date().toISOString(),

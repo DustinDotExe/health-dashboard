@@ -15,7 +15,7 @@ export type SystemStatus = {
   state: "available" | "insufficient-data";
   score?: number;
   note: string;
-  signals: { label: string; unit: string; delta: number }[];
+  signals: { label: string; unit: string; delta: number; componentScore: number; contribution: number }[];
 };
 
 export type HealthTrends = {

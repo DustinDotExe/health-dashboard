@@ -185,15 +185,19 @@ export const today = async (env: HealthdashEnv) => {
   const hrvMetric = metric(hrv, "ms") as { state: string; value?: number; unit: string; baseline?: number; delta?: number };
   const sleepMetric = metric(sleepHours, "hours") as { state: string; value?: number; unit: string; baseline?: number; delta?: number };
   const addBaseline = (target: { value?: number; baseline?: number; delta?: number }, values: { value: number }[]) => {
-    const value = average(values.slice(0, -1).map((point) => point.value)) ?? average(values.map((point) => point.value));
+    const history = values.slice(-28, -1);
+    // A short baseline is too volatile for a recovery estimate. Keep the
+    // score unavailable until at least two weeks of historical readings exist.
+    if (history.length < 14) return;
+    const value = average(history.map((point) => point.value));
     if (value !== undefined) {
       target.baseline = value;
       target.delta = target.value === undefined ? undefined : target.value - value;
     }
   };
-  addBaseline(restingMetric, restingSeries.slice(-7));
-  addBaseline(hrvMetric, hrvSeries.slice(-7));
-  addBaseline(sleepMetric, sleepSeries.slice(-7));
+  addBaseline(restingMetric, restingSeries);
+  addBaseline(hrvMetric, hrvSeries);
+  addBaseline(sleepMetric, sleepSeries);
   const systemStatus = deriveSystemStatus({ hrv: hrvMetric, restingHeartRate: restingMetric, sleep: sleepMetric });
 
   return {

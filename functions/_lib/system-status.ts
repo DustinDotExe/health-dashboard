@@ -4,15 +4,33 @@ export type SystemStatus = {
   state: "available" | "insufficient-data";
   score?: number;
   note: string;
-  signals: { label: string; unit: string; delta: number }[];
+  signals: { label: string; unit: string; delta: number; componentScore: number; contribution: number }[];
 };
 
 const clamp = (value: number, minimum: number, maximum: number) => Math.min(maximum, Math.max(minimum, value));
 
-const scoreFromBaseline = (metric: BaselineMetric, scale: number, direction: 1 | -1) => {
+type Component = { label: string; unit: string; delta: number; componentScore: number; contribution: number };
+
+// This is deliberately an estimate, not an attempt to reproduce Fitbit's
+// proprietary Readiness score. A normal personal baseline starts at 60 and
+// each signal may move the estimate only within its documented range.
+const componentFromBaseline = (
+  label: string,
+  metric: BaselineMetric,
+  percentageAtMaximumEffect: number,
+  maximumEffect: number,
+  direction: 1 | -1,
+): Component | undefined => {
   if (metric.value === undefined || metric.baseline === undefined || metric.baseline <= 0) return undefined;
   const change = (metric.value - metric.baseline) / metric.baseline;
-  return clamp(50 + direction * (change / scale) * 50, 0, 100);
+  const contribution = clamp(direction * (change / percentageAtMaximumEffect) * maximumEffect, -maximumEffect, maximumEffect);
+  return {
+    label,
+    unit: metric.unit ?? "",
+    delta: metric.value - metric.baseline,
+    componentScore: Math.round(clamp(60 + contribution, 0, 100)),
+    contribution: Math.round(contribution * 10) / 10,
+  };
 };
 
 export const deriveSystemStatus = (metrics: {
@@ -20,22 +38,23 @@ export const deriveSystemStatus = (metrics: {
   restingHeartRate: BaselineMetric;
   sleep: BaselineMetric;
 }): SystemStatus => {
-  const hrvScore = scoreFromBaseline(metrics.hrv, 0.2, 1);
-  const restingScore = scoreFromBaseline(metrics.restingHeartRate, 0.12, -1);
-  const sleepScore = scoreFromBaseline(metrics.sleep, 0.25, 1);
-  const signals = [
-    { label: "HRV", unit: metrics.hrv.unit ?? "ms", delta: metrics.hrv.value === undefined || metrics.hrv.baseline === undefined ? undefined : metrics.hrv.value - metrics.hrv.baseline },
-    { label: "RHR", unit: metrics.restingHeartRate.unit ?? "bpm", delta: metrics.restingHeartRate.value === undefined || metrics.restingHeartRate.baseline === undefined ? undefined : metrics.restingHeartRate.value - metrics.restingHeartRate.baseline },
-    { label: "SLEEP", unit: metrics.sleep.unit ?? "hours", delta: metrics.sleep.value === undefined || metrics.sleep.baseline === undefined ? undefined : metrics.sleep.value - metrics.sleep.baseline },
-  ].filter((signal): signal is { label: string; unit: string; delta: number } => signal.delta !== undefined);
+  const components = [
+    // HRV: a 25% change can affect the estimate by up to 18 points.
+    componentFromBaseline("HRV", metrics.hrv, 0.25, 18, 1),
+    // RHR moves in the opposite direction; a 12% change affects up to 15 points.
+    componentFromBaseline("RHR", metrics.restingHeartRate, 0.12, 15, -1),
+    // Sleep is important, but a single short night cannot collapse the estimate.
+    componentFromBaseline("SLEEP", metrics.sleep, 0.2, 18, 1),
+  ];
+  const signals = components.filter((component): component is Component => component !== undefined);
 
-  if (hrvScore === undefined || restingScore === undefined || sleepScore === undefined)
-    return { state: "insufficient-data", note: "Needs HRV, resting heart rate, and sleep baselines.", signals };
+  if (signals.length !== 3)
+    return { state: "insufficient-data", note: "Needs 28-day HRV, resting heart rate, and sleep baselines.", signals };
 
   return {
     state: "available",
-    score: Math.round(hrvScore * 0.4 + restingScore * 0.3 + sleepScore * 0.3),
-    note: "Derived from HRV, resting heart rate, and sleep against your personal baseline.",
+    score: Math.round(clamp(60 + signals.reduce((total, signal) => total + signal.contribution, 0), 0, 100)),
+    note: "Derived recovery estimate from 28-day HRV, resting heart rate, and sleep baselines. Not Google Readiness.",
     signals,
   };
 };
