@@ -30,6 +30,12 @@ export const mockSnapshot: HealthSnapshot = {
   activeZoneMinutes: { state: "available", value: 32, unit: "min", baseline: 28, delta: 4 },
   oxygenSaturation: { state: "available", value: 97, unit: "%", baseline: 97, delta: 0 },
   respiratoryRate: { state: "available", value: 15.6, unit: "brpm", baseline: 15.4, delta: 0.2 },
+  systemStatus: {
+    state: "available",
+    score: 61,
+    note: "Derived from HRV, resting heart rate, and sleep against your personal baseline.",
+    signals: [{ label: "HRV", unit: "ms", delta: 4 }, { label: "RHR", unit: "bpm", delta: -3 }, { label: "SLEEP", unit: "hours", delta: -0.6 }],
+  },
   trends: { sevenDay, thirtyDay },
   source: "mock",
   syncedAt: new Date().toISOString(),

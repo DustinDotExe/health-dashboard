@@ -11,6 +11,13 @@ export type Metric<T> = {
 
 export type TrendPoint = { date: string; value: number };
 
+export type SystemStatus = {
+  state: "available" | "insufficient-data";
+  score?: number;
+  note: string;
+  signals: { label: string; unit: string; delta: number }[];
+};
+
 export type HealthTrends = {
   steps: TrendPoint[];
   restingHeartRate: TrendPoint[];
@@ -27,6 +34,7 @@ export type HealthSnapshot = {
   activeZoneMinutes: Metric<number>;
   oxygenSaturation: Metric<number>;
   respiratoryRate: Metric<number>;
+  systemStatus: SystemStatus;
   trends: {
     sevenDay: HealthTrends;
     thirtyDay: HealthTrends;

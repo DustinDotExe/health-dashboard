@@ -1,4 +1,5 @@
 import type { AuthRecord, HealthdashEnv } from "./types";
+import { deriveSystemStatus } from "./system-status";
 
 type DataPoint = Record<string, any>;
 
@@ -193,6 +194,7 @@ export const today = async (env: HealthdashEnv) => {
   addBaseline(restingMetric, restingSeries.slice(-7));
   addBaseline(hrvMetric, hrvSeries.slice(-7));
   addBaseline(sleepMetric, sleepSeries.slice(-7));
+  const systemStatus = deriveSystemStatus({ hrv: hrvMetric, restingHeartRate: restingMetric, sleep: sleepMetric });
 
   return {
     date,
@@ -203,6 +205,7 @@ export const today = async (env: HealthdashEnv) => {
     activeZoneMinutes: activeZoneResult ? metric(todayActiveZoneMinutes, "min") : unavailable("min", "Google Health active zone minutes are unavailable."),
     oxygenSaturation: oxygenResult ? metric(oxygen, "%") : unavailable("%", "Google Health oxygen saturation is unavailable."),
     respiratoryRate: respiratoryResult ? metric(respiratory, "brpm") : unavailable("brpm", "Google Health respiratory rate is unavailable."),
+    systemStatus,
     trends: {
       sevenDay: { steps: stepSeries.slice(-7), restingHeartRate: restingSeries.slice(-7), hrv: hrvSeries.slice(-7), sleep: sleepSeries.slice(-7) },
       thirtyDay: { steps: stepSeries, restingHeartRate: restingSeries, hrv: hrvSeries, sleep: sleepSeries },

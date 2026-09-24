@@ -32,10 +32,8 @@ Panel {
   }
 
   function recoveryText() {
-    if (!root.available) return "—"
-    var hrv = root.snapshot.hrv && root.snapshot.hrv.state === "available"
-    var resting = root.snapshot.restingHeartRate && root.snapshot.restingHeartRate.state === "available"
-    return hrv || resting ? "SIGNALS" : "—"
+    var status = root.snapshot.systemStatus
+    return status && status.state === "available" && status.score !== undefined ? String(Math.round(Number(status.score))) : "—"
   }
 
   function startPairing() {
@@ -232,7 +230,7 @@ Panel {
                 { label: "ZONE MINUTES", value: root.metricText(root.snapshot.activeZoneMinutes, 0), unit: "min" },
                 { label: "SPO2", value: root.metricText(root.snapshot.oxygenSaturation, 1), unit: "%" },
                 { label: "RESPIRATORY", value: root.metricText(root.snapshot.respiratoryRate, 1), unit: "brpm" },
-                { label: "RECOVERY SIGNALS", value: root.recoveryText(), unit: "only" }
+                { label: "SYSTEM//STATUS", value: root.recoveryText(), unit: "/ 100" }
               ]
 
               Rectangle {
@@ -281,23 +279,6 @@ Panel {
                   }
                 }
               }
-            }
-          }
-
-          Row {
-            visible: root.available
-            spacing: Style.space(18)
-            Text {
-              text: "SpO₂ " + root.metricText(root.snapshot.oxygenSaturation, 0) + "%"
-              color: Qt.darker(root.bar ? root.bar.foreground : Color.foreground, 1.35)
-              font.family: root.bar ? root.bar.fontFamily : Style.font.family
-              font.pixelSize: Style.font.bodySmall
-            }
-            Text {
-              text: "RESP " + root.metricText(root.snapshot.respiratoryRate, 1) + " brpm"
-              color: Qt.darker(root.bar ? root.bar.foreground : Color.foreground, 1.35)
-              font.family: root.bar ? root.bar.fontFamily : Style.font.family
-              font.pixelSize: Style.font.bodySmall
             }
           }
 

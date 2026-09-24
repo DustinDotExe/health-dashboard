@@ -45,8 +45,8 @@ This is a personal single-user application for V1.
 9. **Graceful degradation**
    Missing permissions, unavailable metrics, API errors, or device limitations must not break the dashboard.
 
-10. **No invented health metrics**
-    Never fabricate a readiness score or other health metric because the UI specification expects one.
+10. **Transparent derived metrics only**
+    A derived score must be clearly labeled, explain its inputs, use personal baselines where available, and show an insufficient-data state rather than fabricating a value.
 
 ---
 
@@ -207,11 +207,9 @@ First determine whether a Google/Fitbit readiness score is directly available th
 
 If it is available, display the official value and clearly identify its source.
 
-If it is NOT available:
+If it is NOT available, provide a clearly labeled derived `SYSTEM//STATUS` score only when HRV, resting heart rate, and sleep each have recent personal baselines. The score must show its underlying signals and cannot be presented as a clinical metric or an official provider value. SpO2, respiratory rate, and activity remain supporting context unless reliable personal baselines are available.
 
-**Do not manufacture a proprietary readiness score in V1.**
-
-Instead, create a Recovery panel containing the underlying signals, such as:
+The Recovery panel should retain the underlying signals, such as:
 
 * HRV vs baseline
 * resting HR vs baseline
@@ -841,4 +839,3 @@ After reading this document:
 Do **not** begin full implementation until this research/bootstrap phase is complete.
 
 After reporting the results, proceed with Phase 1 unless blocked by a decision that genuinely requires user input.
-
