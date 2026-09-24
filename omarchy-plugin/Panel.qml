@@ -192,7 +192,7 @@ Panel {
             spacing: Style.space(10)
 
             Text {
-              text: "SYSBODY"
+              text: "SYS//BODY"
               color: root.bar ? root.bar.foreground : Color.foreground
               font.family: root.bar ? root.bar.fontFamily : Style.font.family
               font.pixelSize: Style.font.title
@@ -230,6 +230,8 @@ Panel {
                 { label: "HRV", value: root.metricText(root.snapshot.hrv, 0), unit: "ms" },
                 { label: "SLEEP", value: root.metricText(root.snapshot.sleep, 1), unit: "hours" },
                 { label: "ZONE MINUTES", value: root.metricText(root.snapshot.activeZoneMinutes, 0), unit: "min" },
+                { label: "SPO2", value: root.metricText(root.snapshot.oxygenSaturation, 1), unit: "%" },
+                { label: "RESPIRATORY", value: root.metricText(root.snapshot.respiratoryRate, 1), unit: "brpm" },
                 { label: "RECOVERY SIGNALS", value: root.recoveryText(), unit: "only" }
               ]
 

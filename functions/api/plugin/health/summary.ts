@@ -18,6 +18,9 @@ export const onRequestGet = async ({ request, env }: { request: Request; env: He
       restingHeartRate: snapshot.restingHeartRate,
       hrv: snapshot.hrv,
       sleep: snapshot.sleep,
+      activeZoneMinutes: snapshot.activeZoneMinutes,
+      oxygenSaturation: snapshot.oxygenSaturation,
+      respiratoryRate: snapshot.respiratoryRate,
     });
   } catch (error) {
     const reason = error instanceof Error ? error.message : "health-api-failed";
