@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import { formatNumber, metricDisplay, metricStatus, type HealthSnapshot, type Metric, type TrendPoint } from "./domain";
 import { GoogleHealthProvider } from "./googleProvider";
 import { MockHealthProvider } from "./mockProvider";
 import { applyTheme, savedThemeId, themes } from "./theme";
+import { createDailyBriefContext, createLocalDailyBrief } from "./dailyBrief";
 
 type Route = "today" | "heart" | "sleep" | "activity" | "trends" | "ask";
 
@@ -143,9 +144,7 @@ function Card({ label, value, unit, delta, detail, status, tone = "accent", chil
 }
 
 function Today({ data }: { data: HealthSnapshot }) {
-  const brief = useMemo(() => data.source === "mock"
-    ? "Recovery signals look stable. HRV is above your recent baseline and resting heart rate is below average. Sleep ran shorter than normal, while activity is tracking close to your usual pace."
-    : "Connected Google Health signals are available above. Daily interpretation will be added after the normalized trends layer is complete.", [data.source]);
+  const brief = createLocalDailyBrief(createDailyBriefContext(data));
   const stepsProgress = data.steps.value !== undefined && data.steps.baseline !== undefined ? Math.min(100, Math.round((data.steps.value / data.steps.baseline) * 100)) : undefined;
   const systemStatusAvailable = data.systemStatus.state === "available" && data.systemStatus.score !== undefined;
   const signalText = (metric: HealthSnapshot["hrv"], formatter: (value: number) => string, unit: string) => `${metricDisplay(metric, formatter)} ${unit}`;
@@ -172,7 +171,7 @@ function Today({ data }: { data: HealthSnapshot }) {
         <div className="signal-card"><span>ZONE MINUTES</span><strong>{signalText(data.activeZoneMinutes, formatNumber, "min")}</strong><small>{metricNote(data.activeZoneMinutes, "No reading available")}</small></div>
       </div>
     </section>
-    <section className="brief-panel"><div className="brief-label"><span className="live-dot" /> DAILY BRIEF <span>{data.source === "mock" ? "MOCK DATA" : "SIGNALS ONLY"}</span></div><p>{brief}</p><button className="text-button" onClick={() => window.dispatchEvent(new CustomEvent("open-ask"))}>Ask about this <span>→</span></button></section>
+    <section className="brief-panel"><div className="brief-label"><span className="live-dot" /> DAILY BRIEF <span>LOCAL DERIVED</span></div><p>{brief.text}</p><div className="brief-evidence"><span>SIGNALS USED: {brief.signalsUsed.length ? brief.signalsUsed.join(" · ") : "NONE"}</span><span>{brief.note}</span></div><button className="text-button" onClick={() => window.dispatchEvent(new CustomEvent("open-ask"))}>Ask about this <span>→</span></button></section>
   </>;
 }
 
