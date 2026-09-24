@@ -49,12 +49,12 @@ export const deriveSystemStatus = (metrics: {
   const signals = components.filter((component): component is Component => component !== undefined);
 
   if (signals.length !== 3)
-    return { state: "insufficient-data", note: "Needs 28-day HRV, resting heart rate, and sleep baselines.", signals };
+    return { state: "insufficient-data", note: "Needs prior HRV, resting heart rate, and sleep readings to establish baselines.", signals };
 
   return {
     state: "available",
     score: Math.round(clamp(60 + signals.reduce((total, signal) => total + signal.contribution, 0), 0, 100)),
-    note: "Derived recovery estimate from 28-day HRV, resting heart rate, and sleep baselines. Not Google Readiness.",
+    note: "Derived recovery estimate from up to 28 days of HRV, resting heart rate, and sleep history. Not Google Readiness.",
     signals,
   };
 };

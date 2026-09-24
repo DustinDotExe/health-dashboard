@@ -36,6 +36,11 @@ Panel {
     return status && status.state === "available" && status.score !== undefined ? String(Math.round(Number(status.score))) : "—"
   }
 
+  function recoveryUnit() {
+    var status = root.snapshot.systemStatus
+    return status && status.state === "available" && status.score !== undefined ? "/ 100" : "BASELINE PENDING"
+  }
+
   function startPairing() {
     if (pairing || pluginToken || pairingProcess.running) return
     pairing = true
@@ -230,7 +235,7 @@ Panel {
                 { label: "ZONE MINUTES", value: root.metricText(root.snapshot.activeZoneMinutes, 0), unit: "min" },
                 { label: "SPO2", value: root.metricText(root.snapshot.oxygenSaturation, 1), unit: "%" },
                 { label: "RESPIRATORY", value: root.metricText(root.snapshot.respiratoryRate, 1), unit: "brpm" },
-                { label: "SYSTEM//STATUS", value: root.recoveryText(), unit: "/ 100" }
+                { label: "SYSTEM//STATUS", value: root.recoveryText(), unit: root.recoveryUnit() }
               ]
 
               Rectangle {
@@ -280,6 +285,16 @@ Panel {
                 }
               }
             }
+          }
+
+          Text {
+            visible: root.available && root.snapshot.systemStatus && root.snapshot.systemStatus.state !== "available"
+            width: parent.width
+            wrapMode: Text.WordWrap
+            text: "SYSTEM//STATUS · " + String(root.snapshot.systemStatus.note || "Baseline data is not available yet.")
+            color: Qt.darker(root.bar ? root.bar.foreground : Color.foreground, 1.35)
+            font.family: root.bar ? root.bar.fontFamily : Style.font.family
+            font.pixelSize: Style.font.bodySmall
           }
 
           Text {

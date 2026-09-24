@@ -186,9 +186,10 @@ export const today = async (env: HealthdashEnv) => {
   const sleepMetric = metric(sleepHours, "hours") as { state: string; value?: number; unit: string; baseline?: number; delta?: number };
   const addBaseline = (target: { value?: number; baseline?: number; delta?: number }, values: { value: number }[]) => {
     const history = values.slice(-28, -1);
-    // A short baseline is too volatile for a recovery estimate. Keep the
-    // score unavailable until at least two weeks of historical readings exist.
-    if (history.length < 14) return;
+    // Use the history Google Health actually returns. The estimate becomes
+    // more stable as it approaches 28 days, but a connected user should not
+    // lose their existing status solely because their available history is short.
+    if (history.length < 1) return;
     const value = average(history.map((point) => point.value));
     if (value !== undefined) {
       target.baseline = value;
