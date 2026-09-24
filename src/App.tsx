@@ -143,24 +143,29 @@ function Card({ label, value, unit, delta, detail, status, tone = "accent", chil
   </article>;
 }
 
+function SystemStatusCard({ data }: { data: HealthSnapshot }) {
+  const available = data.systemStatus.state === "available" && data.systemStatus.score !== undefined;
+  return <article className="system-card">
+    <div className="system-card-heading"><span>SYSTEM // STATUS</span><span className={available ? "derived-badge" : "insufficient-badge"}>{available ? "DERIVED" : "INSUFFICIENT DATA"}</span></div>
+    <div className="system-score"><strong>{available ? data.systemStatus.score : "—"}</strong><span>/ 100</span></div>
+    <p>{data.systemStatus.note}</p>
+    <div className="status-basis"><span>BASED ON</span><strong>HRV · RESTING HR · SLEEP</strong></div>
+  </article>;
+}
+
 function Today({ data }: { data: HealthSnapshot }) {
   const brief = createLocalDailyBrief(createDailyBriefContext(data));
   const stepsProgress = data.steps.value !== undefined && data.steps.baseline !== undefined ? Math.min(100, Math.round((data.steps.value / data.steps.baseline) * 100)) : undefined;
-  const systemStatusAvailable = data.systemStatus.state === "available" && data.systemStatus.score !== undefined;
   const signalText = (metric: HealthSnapshot["hrv"], formatter: (value: number) => string, unit: string) => `${metricDisplay(metric, formatter)} ${unit}`;
   const metricNote = (metric: HealthSnapshot["hrv"], fallback: string) => metric.note ?? fallback;
-  const signalTone = (metric: Metric<unknown>) => metric.state === "available" ? "good" : metric.state === "unavailable" ? "unavailable" : "missing";
-  const systemSignal = (label: string, metric: HealthSnapshot["hrv"], digits = 0) => {
-    const contribution = data.systemStatus.signals.find((signal) => signal.label === label);
-    const contributionText = contribution ? `${contribution.componentScore}/100 · ${contribution.contribution >= 0 ? "+" : ""}${contribution.contribution} pts` : "baseline needed";
-    return <span className={`signal ${signalTone(metric)}`}>{label} {metricDisplay(metric, (value) => value.toFixed(digits))} {metric.unit} <small>{contributionText}</small></span>;
-  };
   return <>
-    <section className="hero-grid">
-      <Card label="System // status" value={systemStatusAvailable ? String(data.systemStatus.score) : "—"} unit=" / 100" detail={data.systemStatus.note} status={systemStatusAvailable ? "DERIVED" : "INSUFFICIENT"} tone="positive"><div className="signal-row">{systemSignal("HRV", data.hrv)}{systemSignal("RHR", data.restingHeartRate)}{systemSignal("SLEEP", data.sleep, 1)}</div></Card>
+    <section className="today-overview">
+      <SystemStatusCard data={data} />
+      <div className="today-vitals">
       <Card label="Steps / activity" value={metricDisplay(data.steps, formatNumber)} unit=" steps" delta={data.steps.delta} detail="Today so far" status={metricStatus(data.steps)} tone="accent"><div className="progress"><span style={{ width: `${stepsProgress ?? 0}%` }} /></div><div className="progress-label"><span>{stepsProgress === undefined ? "No baseline available" : `${stepsProgress}% of recent daily average`}</span><span>{data.source === "mock" ? "06:42 PM" : "Google Health"}</span></div></Card>
       <Card label="Resting heart rate" value={metricDisplay(data.restingHeartRate, formatNumber)} unit=" bpm" delta={data.restingHeartRate.delta} detail="7-day personal baseline" status={metricStatus(data.restingHeartRate)} tone="positive"><Sparkline values={data.trends.sevenDay.restingHeartRate.map((point) => point.value)} /></Card>
       <Card label="Sleep" value={metricDisplay(data.sleep, (value) => `${value.toFixed(1)}`)} unit=" hrs" delta={data.sleep.delta} detail={metricNote(data.sleep, "Last sleep window")} status={metricStatus(data.sleep)} tone="warning"><div className="sleep-bar"><span style={{ width: data.sleep.state === "available" ? "100%" : "0%" }} /></div><div className="progress-label"><span>{data.sleep.state === "available" ? "Duration recorded" : metricNote(data.sleep, "No sleep duration available")}</span><span>{data.sleep.state === "available" ? "Google Health" : "—"}</span></div></Card>
+      </div>
     </section>
     <section className="section-block">
       <div className="section-title"><span>SECONDARY SIGNALS</span><span className="section-rule" /></div>
@@ -171,7 +176,7 @@ function Today({ data }: { data: HealthSnapshot }) {
         <div className="signal-card"><span>ZONE MINUTES</span><strong>{signalText(data.activeZoneMinutes, formatNumber, "min")}</strong><small>{metricNote(data.activeZoneMinutes, "No reading available")}</small></div>
       </div>
     </section>
-    <section className="brief-panel"><div className="brief-label"><span className="live-dot" /> DAILY BRIEF <span>LOCAL DERIVED</span></div><p>{brief.text}</p><div className="brief-evidence"><span>SIGNALS USED: {brief.signalsUsed.length ? brief.signalsUsed.join(" · ") : "NONE"}</span><span>{brief.note}</span></div><button className="text-button" onClick={() => window.dispatchEvent(new CustomEvent("open-ask"))}>Ask about this <span>→</span></button></section>
+    <section className="brief-panel"><div className="brief-label"><span className="live-dot" /> DAILY BRIEF <span>LOCAL DERIVED</span></div><p>{brief.text}</p><div className="brief-evidence"><span>{brief.note}</span></div><button className="text-button" onClick={() => window.dispatchEvent(new CustomEvent("open-ask"))}>Ask about this <span>→</span></button></section>
   </>;
 }
 

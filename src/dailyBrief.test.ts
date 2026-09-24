@@ -12,8 +12,8 @@ describe("daily brief", () => {
   it("writes a concise local summary without diagnoses", () => {
     const brief = createLocalDailyBrief(createDailyBriefContext(mockSnapshot));
     expect(brief.source).toBe("local");
-    expect(brief.text).toContain("HRV is 4 ms above your recent baseline");
-    expect(brief.text).toContain("resting heart rate is 3 bpm below your recent baseline");
+    expect(brief.text).toContain("HRV is above its usual range");
+    expect(brief.text).toContain("resting heart rate is below its usual range");
     expect(brief.text).not.toMatch(/diagnos|disease|condition/i);
   });
 

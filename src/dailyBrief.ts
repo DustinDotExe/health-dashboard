@@ -42,9 +42,6 @@ export const createDailyBriefContext = (snapshot: HealthSnapshot): DailyBriefCon
   ].filter((signal): signal is BriefSignal => signal !== undefined),
 });
 
-const number = (value: number, digits = 0) => value.toLocaleString("en-US", { maximumFractionDigits: digits });
-const absolute = (value: number, digits = 0) => number(Math.abs(value), digits);
-
 export const createLocalDailyBrief = (context: DailyBriefContext): DailyBrief => {
   const byKey = Object.fromEntries(context.signals.map((signal) => [signal.key, signal])) as Partial<Record<BriefSignal["key"], BriefSignal>>;
   const observations: string[] = [];
@@ -53,10 +50,10 @@ export const createLocalDailyBrief = (context: DailyBriefContext): DailyBrief =>
   const hrv = byKey.hrv;
   const steps = byKey.steps;
 
-  if (hrv?.delta !== undefined) observations.push(`HRV is ${absolute(hrv.delta)} ms ${hrv.delta >= 0 ? "above" : "below"} your recent baseline`);
-  if (resting?.delta !== undefined) observations.push(`resting heart rate is ${absolute(resting.delta)} bpm ${resting.delta <= 0 ? "below" : "above"} your recent baseline`);
-  if (sleep?.delta !== undefined) observations.push(`sleep was ${absolute(sleep.delta, 1)} hours ${sleep.delta >= 0 ? "above" : "below"} your recent baseline`);
-  if (steps) observations.push(`${number(steps.value)} steps are recorded so far today`);
+  if (hrv?.delta !== undefined) observations.push(`HRV is ${hrv.delta >= 0 ? "above" : "below"} its usual range`);
+  if (resting?.delta !== undefined) observations.push(`resting heart rate is ${resting.delta <= 0 ? "below" : "above"} its usual range`);
+  if (sleep?.delta !== undefined) observations.push(`sleep duration is ${sleep.delta >= 0 ? "above" : "below"} your recent pattern`);
+  if (steps) observations.push("activity is still in progress today");
 
   const baselineSignals = [hrv, resting, sleep].filter((signal) => signal?.delta !== undefined).length;
   const opening = baselineSignals >= 2 ? "Today’s available recovery signals are summarized against your personal baseline." : "This summary is limited to the signals currently available.";
