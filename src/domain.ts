@@ -5,6 +5,8 @@ export type Metric<T> = {
   value?: T;
   unit?: string;
   baseline?: T;
+  baselineDeviation?: number;
+  baselineReadings?: number;
   delta?: number;
   note?: string;
 };

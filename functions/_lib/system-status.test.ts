@@ -29,6 +29,19 @@ describe("deriveSystemStatus", () => {
     expect(status.signals.map((signal) => signal.contribution)).toEqual([-18, -15, -18]);
   });
 
+  it("uses each person's normal variation when it is available", () => {
+    const status = deriveSystemStatus({
+      hrv: { value: 40, baseline: 44, baselineDeviation: 4 },
+      restingHeartRate: { value: 63, baseline: 60, baselineDeviation: 3 },
+      sleep: { value: 7.1, baseline: 7.8, baselineDeviation: 0.7 },
+    });
+
+    // Each one-standard-deviation change makes a modest, bounded adjustment,
+    // rather than treating it as a severe percentage drop.
+    expect(status).toMatchObject({ state: "available", score: 50 });
+    expect(status.signals.map((signal) => signal.contribution)).toEqual([-3.5, -3, -4]);
+  });
+
   it("does not produce a score without all three personal baselines", () => {
     const status = deriveSystemStatus({ hrv: { value: 48, baseline: 44 }, restingHeartRate: { value: 57, baseline: 60 }, sleep: { value: 7.2 } });
 

@@ -181,10 +181,10 @@ export const today = async (env: HealthdashEnv) => {
     steps.baseline = baseline;
     (steps as { delta?: number }).delta = steps.value === undefined ? undefined : steps.value - baseline;
   }
-  const restingMetric = metric(resting, "bpm") as { state: string; value?: number; unit: string; baseline?: number; delta?: number };
-  const hrvMetric = metric(hrv, "ms") as { state: string; value?: number; unit: string; baseline?: number; delta?: number };
-  const sleepMetric = metric(sleepHours, "hours") as { state: string; value?: number; unit: string; baseline?: number; delta?: number };
-  const addBaseline = (target: { value?: number; baseline?: number; delta?: number }, values: { value: number }[]) => {
+  const restingMetric = metric(resting, "bpm") as { state: string; value?: number; unit: string; baseline?: number; baselineDeviation?: number; baselineReadings?: number; delta?: number };
+  const hrvMetric = metric(hrv, "ms") as { state: string; value?: number; unit: string; baseline?: number; baselineDeviation?: number; baselineReadings?: number; delta?: number };
+  const sleepMetric = metric(sleepHours, "hours") as { state: string; value?: number; unit: string; baseline?: number; baselineDeviation?: number; baselineReadings?: number; delta?: number };
+  const addBaseline = (target: { value?: number; baseline?: number; baselineDeviation?: number; baselineReadings?: number; delta?: number }, values: { value: number }[]) => {
     const history = values.slice(-28, -1);
     // Use the history Google Health actually returns. The estimate becomes
     // more stable as it approaches 28 days, but a connected user should not
@@ -193,6 +193,11 @@ export const today = async (env: HealthdashEnv) => {
     const value = average(history.map((point) => point.value));
     if (value !== undefined) {
       target.baseline = value;
+      target.baselineReadings = history.length;
+      if (history.length >= 3) {
+        const variance = average(history.map((point) => (point.value - value) ** 2));
+        if (variance !== undefined) target.baselineDeviation = Math.sqrt(variance);
+      }
       target.delta = target.value === undefined ? undefined : target.value - value;
     }
   };
