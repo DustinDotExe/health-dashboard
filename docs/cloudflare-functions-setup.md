@@ -8,7 +8,12 @@ Before enabling live data in Pages, configure these production environment varia
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
 GOOGLE_REDIRECT_URI=https://sysbody.stream/auth/google/callback
+HEALTHDASH_TIME_ZONE=America/New_York
 ```
+
+`HEALTHDASH_TIME_ZONE` determines the civil calendar day used for Google Health
+daily rollups. It defaults to `America/New_York`; set it to the account's IANA
+time zone if the deployment serves a user elsewhere.
 
 Create a Cloudflare KV namespace and bind it to the Pages project as:
 

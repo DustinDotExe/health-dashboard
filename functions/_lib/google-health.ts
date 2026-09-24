@@ -3,6 +3,7 @@ import type { AuthRecord, HealthdashEnv } from "./types";
 type DataPoint = Record<string, any>;
 
 const AUTH_KEY = "google-auth";
+const DEFAULT_HEALTH_TIME_ZONE = "America/New_York";
 
 const readAuth = async (env: HealthdashEnv): Promise<AuthRecord | null> => env.HEALTHDASH_AUTH
   ? env.HEALTHDASH_AUTH.get(AUTH_KEY, "json")
@@ -63,8 +64,8 @@ const dailyRollup = async (token: string, dataType: string, startDate: string, e
   return await response.json() as { rollupDataPoints?: DataPoint[] };
 };
 
-const civilDate = (date: Date) => {
-  const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(date);
+export const civilDate = (date: Date, timeZone = DEFAULT_HEALTH_TIME_ZONE) => {
+  const parts = new Intl.DateTimeFormat("en-CA", { year: "numeric", month: "2-digit", day: "2-digit", timeZone }).formatToParts(date);
   const values = Object.fromEntries(parts.filter((part) => part.type !== "literal").map((part) => [part.type, part.value]));
   return `${values.year}-${values.month}-${values.day}`;
 };
@@ -115,7 +116,7 @@ const dailyValues = (points: DataPoint[], key: string, valueKey: string) => poin
 export const today = async (env: HealthdashEnv) => {
   const token = await accessToken(env);
   const now = new Date();
-  const date = civilDate(now);
+  const date = civilDate(now, env.HEALTHDASH_TIME_ZONE || DEFAULT_HEALTH_TIME_ZONE);
   const monthAgo = shiftDate(date, -30);
   const tomorrow = shiftDate(date, 1);
   const dayFilter = (field: string) => `${field} >= "${monthAgo}" AND ${field} < "${tomorrow}"`;

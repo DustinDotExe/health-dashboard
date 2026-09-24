@@ -15,5 +15,6 @@ export type HealthdashEnv = {
   GOOGLE_CLIENT_ID?: string;
   GOOGLE_CLIENT_SECRET?: string;
   GOOGLE_REDIRECT_URI?: string;
+  HEALTHDASH_TIME_ZONE?: string;
   HEALTHDASH_AUTH?: AuthStore;
 };
