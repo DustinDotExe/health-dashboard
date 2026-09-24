@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { formatNumber, metricDisplay, metricStatus, type HealthSnapshot, type Metric, type TrendPoint } from "./domain";
 import { GoogleHealthProvider } from "./googleProvider";
 import { MockHealthProvider } from "./mockProvider";
-import { applyTheme, loadTheme } from "./theme";
+import { applyTheme, savedThemeId, themes } from "./theme";
 
 type Route = "today" | "heart" | "sleep" | "activity" | "trends" | "ask";
 
@@ -106,7 +106,7 @@ export default function App() {
   const [route, setRoute] = useState<Route>("today");
   const [data, setData] = useState<HealthSnapshot | null>(null);
   const [helpOpen, setHelpOpen] = useState(false);
-  const [themeName, setThemeName] = useState("fallback");
+  const [themeId, setThemeId] = useState(savedThemeId);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [googleConnected, setGoogleConnected] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -144,7 +144,8 @@ export default function App() {
       setRefreshing(false);
     }
   };
-  useEffect(() => { void refresh(); void loadTheme().then((theme) => { setThemeName(theme.name); applyTheme(theme); }); }, []);
+  useEffect(() => { void refresh(); }, []);
+  useEffect(() => { applyTheme(themeId); }, [themeId]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if ((event.target as HTMLElement).tagName === "INPUT") return;
@@ -159,7 +160,7 @@ export default function App() {
   useEffect(() => { const handler = () => setRoute("ask"); window.addEventListener("open-ask", handler); return () => window.removeEventListener("open-ask", handler); }, []);
 
   return <div className="app-shell">
-    <header className="topbar"><div className="brand"><span className="brand-glyph">+</span><strong>SYSBODY</strong><span className="brand-divider">//</span><small>LOCAL HUMAN COMMAND CENTER</small></div><div className="top-meta"><span><i className="live-dot" /> SYSTEM ONLINE</span><span>THEME // {themeName.toUpperCase()}</span><button onClick={() => void refresh()} disabled={refreshing} title="Refresh data (r)">{refreshing ? "SYNCING …" : "SYNC ↻"}</button></div></header>
+    <header className="topbar"><div className="brand"><span className="brand-glyph">+</span><strong>SYSBODY</strong><span className="brand-divider">//</span><small>LOCAL HUMAN COMMAND CENTER</small></div><div className="top-meta"><span><i className="live-dot" /> SYSTEM ONLINE</span><label className="theme-picker"><span>THEME</span><select value={themeId} onChange={(event) => setThemeId(event.target.value)} aria-label="Color theme">{themes.map((theme) => <option key={theme.id} value={theme.id}>{theme.label}</option>)}</select></label><button onClick={() => void refresh()} disabled={refreshing} title="Refresh data (r)">{refreshing ? "SYNCING …" : "SYNC ↻"}</button></div></header>
     <div className="layout"><aside className="sidebar"><div className="nav-label">NAVIGATION</div>{routes.map((item) => <button key={item.key} className={route === item.key ? "active" : ""} onClick={() => setRoute(item.key)}><span><b>{item.shortcut}</b>{item.label}</span>{route === item.key && <em>●</em>}</button>)}<button className={route === "ask" ? "active" : ""} onClick={() => setRoute("ask")}><span><b>/</b>Ask Health</span>{route === "ask" && <em>●</em>}</button><div className="sidebar-footer"><div className="connection"><span className={`status-dot ${googleConnected ? "connected" : "mock"}`} /> <span>{googleConnected ? "GOOGLE HEALTH" : "MOCK PROVIDER"}<small>{googleConnected ? "CONNECTED" : "GOOGLE HEALTH // PENDING"}</small></span></div>{googleConnected ? <button onClick={() => { void fetch("/auth/google/logout").then(() => setGoogleConnected(false)); }} className="help-link">× DISCONNECT</button> : <button onClick={() => { window.location.href = "/auth/google/start"; }} className="help-link">+ CONNECT GOOGLE</button>}<button onClick={() => setHelpOpen(true)} className="help-link">? SHORTCUTS</button></div></aside>
       <main><div className="page-header"><div><div className="eyebrow">HEALTH // {route.toUpperCase()}</div><h1>{route === "today" ? "How are you doing today?" : route === "ask" ? "Ask Health" : route}</h1></div><div className="date-block"><strong>{new Date().toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }).toUpperCase()}</strong><span>LAST SYNC {lastRefresh.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</span></div></div>{data ? route === "today" ? <Today data={data} /> : <DetailView route={route} data={data} /> : loadError ? <div className="empty-detail"><span>!</span><strong>Health data unavailable</strong><small>{loadError}</small><button className="retry-button" onClick={() => void refresh()} disabled={refreshing}>{refreshing ? "Retrying…" : "Retry sync"}</button></div> : <div className="loading" aria-live="polite">LOADING HEALTH SIGNALS<span>...</span></div>}</main>
     </div><footer className="statusbar"><span>LOCALHOST // READ-ONLY MODE</span><span>DATA SOURCE: {data?.source.toUpperCase() ?? "CONNECTING"}</span><span>PRESS <b>?</b> FOR HELP</span></footer>

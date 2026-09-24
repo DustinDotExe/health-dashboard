@@ -17,7 +17,7 @@ Open the printed localhost URL in Chromium. The development server binds to `127
 
 ## Omarchy bar plugin
 
-Healthdash includes a native Omarchy `bar-widget` in [omarchy-plugin](omarchy-plugin/). The widget opens `sysbody.stream` for Google login, pairs through a one-time code, then polls a privacy-minimized HTTPS summary. Before connection it shows `♥ + Connect`; it does not display mock health values.
+Healthdash includes a native Omarchy `bar-widget` and themed quick panel in [omarchy-plugin](omarchy-plugin/). Clicking the bar item opens the panel; the first click also opens `sysbody.stream` for Google login. After pairing, it polls a privacy-minimized HTTPS summary. Before connection it shows `♥ + Connect`; it does not display mock health values.
 
 Validate and install it for the current user with:
 

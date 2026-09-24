@@ -1,11 +1,12 @@
 # Healthdash Omarchy plugin
 
-This is a native Omarchy `bar-widget` for the hosted Healthdash application.
-It opens `sysbody.stream` for Google login, pairs through a one-time code, and
-then polls a minimal HTTPS health-summary endpoint once per minute.
+This is a native Omarchy `bar-widget` with a themed `KeyboardPanel` for the
+hosted Healthdash application. Clicking the bar item opens the native panel;
+the first click also opens `sysbody.stream` for Google login. After pairing,
+the panel polls a minimal HTTPS health-summary endpoint once per minute.
 
-The widget never handles Google OAuth or raw health history. The pairing token
-is held in memory by the shell and expires server-side; the widget shows
+The plugin never handles Google OAuth or raw health history. The pairing token
+is held in memory by the shell and expires server-side; the native panel shows
 `♥ + Connect` until the browser pairing flow is completed.
 
 ## Installation

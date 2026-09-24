@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "healthdash.health",
-  "name": "SYSBODY",
+  "name": "SYS//BODY",
   "version": "0.1.0",
   "author": "Healthdash",
   "description": "Personal health signals for the Omarchy bar",
@@ -10,8 +10,8 @@
     "barWidget": "Healthdash.qml"
   },
   "barWidget": {
-    "displayName": "SYSBODY",
-    "description": "Personal health signals from SYSBODY",
+    "displayName": "SYS//BODY",
+    "description": "Personal health signals from SYS//BODY",
     "category": "Health",
     "allowMultiple": false,
     "defaultSection": "right",
@@ -19,7 +19,7 @@
       "baseUrl": "https://sysbody.stream"
     },
     "schema": [
-      { "key": "baseUrl", "type": "string", "label": "SYSBODY URL" }
+      { "key": "baseUrl", "type": "string", "label": "SYS//BODY URL" }
     ]
   }
 }

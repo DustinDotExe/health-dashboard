@@ -40,8 +40,9 @@ BarWidget {
   }
 
   visible: true
-  implicitWidth: content.implicitWidth + Style.space(16)
+  implicitWidth: content.implicitWidth
   implicitHeight: barSize
+  readonly property real openPanelIndicatorWidth: implicitWidth
 
   onBarChanged: Qt.callLater(root.injectPanel)
   onSettingsChanged: Qt.callLater(root.injectPanel)
@@ -82,7 +83,7 @@ BarWidget {
     hoverEnabled: true
     cursorShape: Qt.PointingHandCursor
     onClicked: root.togglePanel()
-    onEntered: if (root.bar) root.bar.showTooltip(root, "SYSBODY · open panel")
+    onEntered: if (root.bar) root.bar.showTooltip(root, "SYS//BODY · open panel")
     onExited: if (root.bar) root.bar.hideTooltip(root)
   }
 }
