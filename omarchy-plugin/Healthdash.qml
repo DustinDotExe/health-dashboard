@@ -11,6 +11,7 @@ BarWidget {
   readonly property bool connected: panelLoader.item ? panelLoader.item.pluginToken !== "" : false
   readonly property bool pairing: panelLoader.item ? panelLoader.item.pairing === true : false
   readonly property var snapshot: panelLoader.item ? panelLoader.item.snapshot : ({})
+  readonly property int toolbarFontSize: Style.font.caption + 2
 
   function injectPanel() {
     var target = panelLoader.item
@@ -66,14 +67,14 @@ BarWidget {
       text: root.pairing ? "♥ …" : root.available ? "♥ " + String(Math.round(Number(root.snapshot.restingHeartRate?.value ?? 0))) : root.connected ? "♥ —" : "♥ +"
       color: root.bar ? root.bar.barForeground : Color.foreground
       font.family: root.bar ? root.bar.fontFamily : Style.font.family
-      font.pixelSize: Style.font.caption
+      font.pixelSize: root.toolbarFontSize
     }
 
     Text {
       text: root.pairing ? "Login" : root.available ? "· " + String(Math.round(Number(root.snapshot.steps?.value ?? 0))) : root.connected ? "Sync" : "Connect"
       color: root.bar ? root.bar.barForeground : Color.foreground
       font.family: root.bar ? root.bar.fontFamily : Style.font.family
-      font.pixelSize: Style.font.caption
+      font.pixelSize: root.toolbarFontSize
       opacity: 0.8
     }
   }
